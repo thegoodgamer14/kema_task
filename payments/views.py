@@ -24,7 +24,6 @@ class PaymentLinkViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentLinkSerializer
 
     def generate_qr_code(self, payment_link_id):
-        """Generate QR code with payment link data"""
         payment_url = f"http://localhost:8008/pay/{payment_link_id}"
         
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
@@ -37,13 +36,11 @@ class PaymentLinkViewSet(viewsets.ModelViewSet):
         return base64.b64encode(buffer.getvalue()).decode()
 
     def create(self, request, *args, **kwargs):
-        """Create payment link with QR code"""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         expiry_time = timezone.now() + timedelta(hours=24)
         payment_link = serializer.save(expiry_time=expiry_time)
         
-        # Generate and save QR code
         qr_code = self.generate_qr_code(payment_link.id)
         payment_link.qr_code_data = qr_code
         payment_link.save()
@@ -52,7 +49,6 @@ class PaymentLinkViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def check_status(self, request, pk=None):
-        """Check if payment link is still valid"""
         payment_link = self.get_object()
         
         if payment_link.status == PaymentLink.Status.EXPIRED:
@@ -82,25 +78,20 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def process_payment(self, request):
-        """Process a new payment"""
         payment_link_id = request.data.get('payment_link_id')
         buyer_data = request.data.get('buyer')
         
-        # Get or create buyer
         buyer_serializer = BuyerSerializer(data=buyer_data)
         buyer_serializer.is_valid(raise_exception=True)
         buyer = buyer_serializer.save()
         
-        # Get payment link
         payment_link = get_object_or_404(PaymentLink, id=payment_link_id)
         
-        # Check if payment link is valid
         if payment_link.status != PaymentLink.Status.ACTIVE:
             return Response({
                 'error': 'Payment link is not active'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Create payment record
         payment_data = {
             'payment_link': payment_link.id,
             'buyer': buyer.id,
@@ -113,8 +104,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
         payment_serializer.is_valid(raise_exception=True)
         payment = payment_serializer.save()
         
-        # Simulate payment processing
-        # In real app, this would integrate with payment gateway
         try:
             self.simulate_payment_processing(payment)
             return Response({
@@ -130,14 +119,32 @@ class PaymentViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
     def simulate_payment_processing(self, payment):
-        """Simulate payment gateway processing"""
-        # In real app, this would be replaced with actual payment gateway integration
         payment.status = Payment.Status.COMPLETED
         payment.paid_at = timezone.now()
         payment.transaction_reference = f"SIMULATED_TXN_{payment.id}"
         payment.save()
         
-        # Update payment link status
         payment_link = payment.payment_link
         payment_link.status = PaymentLink.Status.COMPLETED
         payment_link.save()
+
+    @action(detail=True, methods=['post'])
+    def refund(self, request, pk=None):
+        payment = self.get_object()
+        
+        if payment.status != Payment.Status.COMPLETED:
+            return Response({
+                'error': 'Only completed payments can be refunded'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            payment.status = Payment.Status.REFUNDED
+            payment.save()
+            return Response({
+                'status': 'success',
+                'message': 'Payment refunded successfully'
+            })
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
