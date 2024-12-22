@@ -26,7 +26,7 @@ class PaymentLinkViewSet(viewsets.ModelViewSet):
     def generate_qr_code(self, payment_link_id):
         payment_url = f"http://localhost:8008/pay/{payment_link_id}"
         
-        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr = qrcode.QRCode(version=1, box_size=5, border=1)
         qr.add_data(payment_url)
         qr.make(fit=True)
         
