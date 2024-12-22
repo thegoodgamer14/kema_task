@@ -35,12 +35,15 @@
         </div>
         <button type="submit">Create Payment Link</button>
       </form>
-  
+      
       <!-- QR Code Display -->
-      <div v-if="qrCodeImage">
+      <div v-if="qrCodeImage" class="redirect">
         <h2>Scan the QR Code to Pay</h2>
         <img :src="qrCodeImage" alt="QR Code" />
-      </div>
+        <div class="button-container">
+          <button @click="navigateToBuyerPage">Go to Buyer Page</button>
+        </div>
+  </div>
     </div>
   </template>
   
@@ -61,14 +64,20 @@
           currency: '',
           description: ''
         },
-        qrCodeImage: ''
+        qrCodeImage: '',
+        buyerPageUrl: ''
       };
     },
     methods: {
       async createMerchant() {
         try {
-          const response = await axios.post('http://localhost:8008/api/merchants/', this.merchantForm);
+          const response = await axios.post('http://localhost:8008/api/merchants/', this.merchantForm, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
           console.log('Merchant created:', response.data);
+          this.merchantId = response.data.id;
           alert('Merchant created successfully!');
         } catch (error) {
           console.error('Error creating merchant:', error);
@@ -76,18 +85,30 @@
         }
       },
       async createPaymentLink() {
+        if (!this.merchantId) {
+          alert('Merchant ID is missing. Please create a merchant first.');
+          return;
+        }
         try {
-          const response = await axios.post('http://localhost:8008/api/payment-links/', {
+          const requestBody = {
             merchant: this.merchantId,
             amount: this.paymentLinkForm.amount,
             currency: this.paymentLinkForm.currency,
             description: this.paymentLinkForm.description
+          };
+
+          console.log('Request Body:', requestBody); // Log the request body
+
+          const response = await axios.post('http://localhost:8008/api/payment-links/', requestBody, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
           });
           console.log('Payment link created:', response.data);
 
           // Generate the QR code with the buyer page URL
-          const buyerPageUrl = `http://localhost:8080/buyer/${response.data.id}`; // Replace with your frontend URL
-          this.qrCodeImage = await QRCode.toDataURL(buyerPageUrl);
+          this.buyerPageUrl = `http://localhost:8080/buyer/${response.data.id}/`; // Replace with your frontend URL
+          this.qrCodeImage = await QRCode.toDataURL(this.buyerPageUrl);
 
           alert('Payment link created successfully!');
         } catch (error) {
@@ -95,6 +116,11 @@
           alert('Failed to create payment link. Please try again.');
         }
       },
+      navigateToBuyerPage() {
+        if (this.buyerPageUrl) {
+          window.location.href = this.buyerPageUrl;
+  }
+},
     }
   };
   </script>
@@ -124,5 +150,9 @@
   }
   button:hover {
     background-color: #0056b3;
+  }
+  .redirect {
+    display: flex;
+    flex-direction: column;
   }
   </style>

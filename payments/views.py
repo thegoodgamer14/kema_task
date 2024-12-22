@@ -69,6 +69,7 @@ class PaymentLinkViewSet(viewsets.ModelViewSet):
             'status': payment_link.status,
             'amount': payment_link.amount,
             'currency': payment_link.currency,
+            'description': payment_link.description,
             'expires_at': payment_link.expiry_time
         })
 
