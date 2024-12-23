@@ -10,5 +10,4 @@ venv/
 .DS_Store
 
 # Ignore sensitive settings
-settings.py
 *.env
