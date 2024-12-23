@@ -64,20 +64,16 @@ git clone https://github.com/thegoodgamer14/kema_task.git
 ```
 
 #### **2. Backend Setup**
-1. Navigate to the backend directory:
-   ```bash
-   cd payments
-   ```
-2. Install backend dependencies:
+1. Install backend dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. Set up the database and run migrations:
+2. Set up the database and run migrations:
    ```bash
    python manage.py makemigrations
    python manage.py migrate
    ```
-4. Run the backend development server:
+3. Run the backend development server:
    ```bash
    ./runserver.bat
    ```
